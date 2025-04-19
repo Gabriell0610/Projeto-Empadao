@@ -21,11 +21,6 @@ enum status {
   CANCELADO
 }
 
-enum roles {
-  ADMIN
-  CLIENT
-}
-
 enum meioPagamento {
   PIX
   CARTAO_CREDITO
@@ -33,47 +28,72 @@ enum meioPagamento {
 }
 
 model Usuario {
-  id              String     @id @default(uuid())
-  nome            String?    @db.VarChar()
-  email           String?    @unique @db.VarChar()
-  senha           String?    @db.VarChar()
-  telefone        String?    @db.VarChar(11)
-  dataCriacao     DateTime?  @default(now()) @map("data de criacao") @db.Date
-  dataAtualizacao DateTime?  @default(now()) @map("data de atualizacao") @db.Date
-  role            roles?
-  enderecos       Endereco[] @relation("UsuarioEndereco")
+  id              String            @id @default(uuid())
+  nome            String            @db.VarChar()
+  email           String            @unique @db.VarChar()
+  senha           String            @db.VarChar()
+  telefone        String            @db.VarChar(11)
+  dataCriacao     DateTime?         @default(now()) @map("data de criacao") @db.Date
+  dataAtualizacao DateTime?         @default(now()) @map("data de atualizacao") @db.Date
+  role            String
+  enderecos       UsuarioEndereco[]
   pedidos         Pedido[]
   carrinho        Carrinho?
+  tokenResets     tokenResets[]
+}
+
+model tokenResets {
+  id          String    @id @default(uuid())
+  token       String    @unique @db.VarChar()
+  expiraEm    DateTime  @db.Timestamp()
+  status      String
+  dataCriacao DateTime? @default(now()) @map("data de criacao") @db.Date
+  usuarioId   String
+  usuario     Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@map("token_resets")
 }
 
 model Endereco {
-  id          String    @id @default(uuid())
-  cep         String?   @db.VarChar()
-  rua         String?   @db.VarChar()
-  bairro      String?   @db.VarChar()
-  numero      String?   @db.VarChar()
-  cidade      String?   @db.VarChar()
-  estado      String?   @db.VarChar()
-  complemento String?   @db.VarChar()
-  usuarios    Usuario[] @relation("UsuarioEndereco")
-  pedidos     Pedido[]
+  id              String            @id @default(uuid())
+  cep             String            @db.VarChar()
+  rua             String            @db.VarChar()
+  bairro          String            @db.VarChar()
+  numero          String            @db.VarChar()
+  cidade          String            @db.VarChar()
+  estado          String            @db.VarChar()
+  complemento     String?           @db.VarChar()
+  dataCriacao     DateTime?         @default(now()) @map("data de criacao") @db.Date
+  dataAtualizacao DateTime?         @default(now()) @map("data de atualizacao") @db.Date
+  pedidos         Pedido[]
+  usuarios        UsuarioEndereco[]
 
   @@map("enderecos")
 }
 
+model UsuarioEndereco {
+  usuarioId  String
+  enderecoId String
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  endereco   Endereco @relation(fields: [enderecoId], references: [id], onDelete: Cascade)
+
+  @@id([usuarioId, enderecoId]) // Chave composta
+  @@map("usuario_endereco") // Nome da tabela no banco de dados
+}
+
 model Pedido {
-  id            String         @id @default(uuid())
-  numeroPedido  Int            @unique
-  status        status?
-  precoTotal    Float?         @db.Real
-  meioPagamento meioPagamento?
+  id            String        @id @default(uuid())
+  numeroPedido  Int           @unique
+  status        status
+  precoTotal    Float         @db.Real
+  meioPagamento meioPagamento
 
   dataCriacao     DateTime? @default(now()) @map("data de criacao") @db.Date
   dataAtualizacao DateTime? @default(now()) @map("data de atualizacao") @db.Date
   dataAgendamento DateTime? @db.Timestamp()
 
-  usuario    Usuario  @relation(fields: [usuarioId], references: [id])
-  endereco   Endereco @relation(fields: [enderecoId], references: [id])
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  endereco   Endereco @relation(fields: [enderecoId], references: [id], onDelete: Cascade)
   usuarioId  String
   enderecoId String
 
@@ -84,13 +104,13 @@ model Pedido {
 
 model Item {
   id              String    @id @default(uuid())
-  nome            String?   @db.VarChar()
-  preco           Float?    @db.Real
-  descricao       String?   @db.VarChar()
-  image           String?   @db.VarChar()
+  nome            String    @db.VarChar()
+  preco           Float     @db.Real
+  descricao       String    @db.VarChar()
+  image           String    @db.VarChar()
   dataCriacao     DateTime? @default(now()) @map("data de criacao") @db.Date
   dataAtualizacao DateTime? @default(now()) @map("data de atualizacao") @db.Date
-  disponivel      Boolean?
+  disponivel      Boolean
 
   pedidoItens   PedidoItem[]
   carrinhoItens CarrinhoItens[]
@@ -114,8 +134,8 @@ model PedidoItem {
   quantidade Int
   precoAtual Float  @db.Real
 
-  pedido   Pedido @relation(fields: [pedidoId], references: [id])
-  item     Item   @relation(fields: [itemId], references: [id])
+  pedido   Pedido @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  item     Item   @relation(fields: [itemId], references: [id], onDelete: Cascade)
   pedidoId String
   itemId   String
 
@@ -127,8 +147,8 @@ model CarrinhoItens {
   quantidade Int
   precoAtual Float  @db.Real
 
-  Carrinho   Carrinho @relation(fields: [carrinhoId], references: [id])
-  Item       Item     @relation(fields: [itemId], references: [id])
+  Carrinho   Carrinho @relation(fields: [carrinhoId], references: [id], onDelete: Cascade)
+  Item       Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
   carrinhoId String
   itemId     String
 }
